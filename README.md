@@ -12,64 +12,46 @@ Create the following folder on your SD card:
 /switch/galaxian_nx/
 ```
 
-Place the following files inside:
+Place:
 
 ```text
-/switch/galaxian_nx/
-├── galaxian_nx.nro
-├── libgodot_android.so
-├── libc++_shared.so
-├── config.txt
-├── assets/
-│   ├── project.binary
-│   └── ...
-└── save/
-    ├── content/
-    └── install.cfg
+galaxian_nx.nro
+libgodot_android.so
+libc++_shared.so
+config.txt
+assets/project.binary...
+save/content
+save/install.cfg
 ```
 
-The Android libraries and game data must be obtained from the original Android version of the game.
+The Android libraries and game data must be obtained from the original Android version.
 
 ## Obtaining the game files
 
-The Android APK required for preparing the game data can be obtained from the **TheWWWorm/galaxian** project:
+APK can be obtained from:
 
 https://github.com/TheWWWorm/galaxian
 
-Download the appropriate Android APK from the repository. The project provides Android ARM64 and x86-64 builds.
+Download the appropriate APK and launch it at least once on an Android device or Android emulator.
 
-Install the APK on an Android phone or Android emulator on PC and launch the game **at least once**.
-
-After the first launch, locate the game's generated data and extract:
+Extract:
 
 ```text
 content/
 install.cfg
 ```
 
-These files are required to obtain the game data `hash` and prepare the files for `galaxian_nx`.
-
-After extracting them, copy both `content/` and `install.cfg` into:
+and copy them to:
 
 ```text
 /switch/galaxian_nx/save/
 ```
 
-The resulting structure should be:
+These files are required to obtain the game data hash.
 
-```text
-/switch/galaxian_nx/save/
-├── content/
-└── install.cfg
-```
-
-Keep the original `content/` directory and `install.cfg` available during the preparation process.
-
-The original game content is not included in the `galaxian` source repository itself.
+Original game content is not included in this repository.
 
 ## Controls
-
-The Nintendo Switch controller is mapped to the Godot input system:
 
 | Nintendo Switch | Godot         |
 | --------------- | ------------- |
@@ -89,27 +71,16 @@ The Nintendo Switch controller is mapped to the Godot input system:
 | +               | Start         |
 | -               | Back          |
 
-Analog stick deadzone can be configured with:
+Default configuration:
 
 ```text
 deadzone 18
-```
-
-Touch controls are disabled by default:
-
-```text
 touch_controls 0
 ```
 
 ## Configuration
 
-The configuration file is:
-
-```text
-/switch/galaxian_nx/config.txt
-```
-
-Default configuration:
+`config.txt`:
 
 ```text
 screen_width 1280
@@ -121,70 +92,51 @@ touch_controls 0
 rendering_method mobile
 ```
 
-### Configuration options
-
-| Option           | Description                    |
-| ---------------- | ------------------------------ |
-| `screen_width`   | Render width                   |
-| `screen_height`  | Render height                  |
-| `deadzone`       | Analog-stick dead zone         |
-| `assetpack`      | Enables the indexed asset pack |
-| `enable_vulkan`  | Enables Vulkan rendering       |
-| `touch_controls` | Enables touch controls         |
-
 ## Resolution
 
-The default resolution is:
+Default resolution:
 
 ```text
-screen_width 1280
-screen_height 720
+1280x720
 ```
 
-The resolution can be changed directly in `config.txt`.
-
-For example:
-
-```text
-screen_width 1920
-screen_height 1080
-```
+Higher resolutions such as `1920x1080` can also be configured.
 
 ## Build
 
-The project requires:
+Requires:
 
 * devkitPro
 * devkitA64
 * libnx
 * GNU Make
+* Mesa Switch port
 
-Required portlibs:
+The Mesa Switch components required by this project must be built separately.
+
+Mesa for Nintendo Switch:
+
+https://github.com/NaGaa95/mesa-switch
+
+Follow the build instructions in the repository and install/build the required Switch libraries and headers before compiling this project.
+
+Additional dependencies:
 
 ```bash
 dkp-pacman -S switch-zlib switch-libexpat
 ```
 
-The renderer uses a custom Mesa build with the NVK Vulkan driver for Nintendo Switch.
-
-The required Mesa SDK is already included in this repository:
-
-```text
-mesa-sdk/
-```
-
-No separate Mesa SDK download is required.
-
-Build from a devkitPro shell:
+Build:
 
 ```bash
 make
 ```
 
-Clean the build:
+Clean build:
 
 ```bash
 make clean
+make
 ```
 
 The build produces:
@@ -200,7 +152,6 @@ galaxian_nx.elf
 ```text
 galaxian_nx/
 ├── source/
-├── mesa-sdk/
 ├── Makefile
 ├── LICENSE
 └── README.md
@@ -208,18 +159,20 @@ galaxian_nx/
 
 ## Credits
 
-* **TheWWWorm** — Galaxy on Fire engine work and the original `galaxian` project.
-* **Galaxy on Fire** — original game and its developers.
-* **Delson (delsonazevedo)** — original Godot 4 Nintendo Switch wrapper this project was retargeted from.
-* **NaGaa95** — custom Mesa and Vulkan work.
-* **TheFloW (Andy Nguyen), fgsfds & Rinnegatamante** — SoLoader lineage used by the wrapper.
-* **Godot Engine contributors** — Godot Engine, licensed under MIT.
-* **Nintendo Switch homebrew community** — tools, libraries and documentation used by the project.
+* TheWWWorm
+* Galaxy on Fire
+* NaGaa95 — Mesa Switch port
+* Delson / delsonazevedo
+* NaGaa95
+* ChanseyIsTheBest
+* TheFloW / fgsfds / Rinnegatamante
+* Godot Engine contributors
+* Nintendo Switch homebrew community
 
 ## Legal
 
-Galaxy on Fire and its related assets, trademarks and copyrights belong to their respective copyright holders.
+Galaxy on Fire and its assets, trademarks and copyrights belong to their respective rights holders.
 
-This project is an unofficial Nintendo Switch port and is not affiliated with or endorsed by the original developers or rights holders.
+This is an unofficial fan-made port and is not affiliated with or endorsed by the original developers or publishers.
 
-Game assets and Android libraries are not included in this repository unless explicitly provided by their respective copyright holders.
+Game assets and Android libraries are not included in this repository unless explicitly provided by their respective rights holders.
