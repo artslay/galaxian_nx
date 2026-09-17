@@ -203,12 +203,12 @@ galaxian_nx/
 
 ## Credits
 
+* NaGaa95 — custom Mesa and Vulkan work.
 * TheWWWorm — Android version / game port source
-* NaGaa95 — Mesa Switch port
-* Delson / delsonazevedo
-* TheFloW / fgsfds / Rinnegatamante
-* Godot Engine contributors
-* Nintendo Switch homebrew community
+* Delson (delsonazevedo) — original Godot 4 Nintendo Switch wrapper this project was retargeted from.
+* TheFloW (Andy Nguyen), fgsfds & Rinnegatamante — SoLoader lineage used by the wrapper.
+* Godot Engine contributors — Godot Engine, licensed under MIT.
+* Nintendo Switch homebrew community — tools, libraries and documentation used by the project.
 
 ## Legal
 
