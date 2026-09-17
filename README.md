@@ -75,18 +75,21 @@ to:
 
 The game data can be obtained from either the original **Android or PC version** of the game.
 
-Obtain:
+After launching the game for the first time, the following files are created:
 
 ```text
 content/
 install.cfg
 ```
 
-and copy them to:
+Copy them to:
 
 ```text
 /switch/galaxian_nx/save/
 ```
+
+These files are required by the port to load the original game data.
+
 
 ## Notes
 
