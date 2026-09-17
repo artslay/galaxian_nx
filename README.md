@@ -2,39 +2,80 @@
 
 A Nintendo Switch port of the Android version of **Galaxy on Fire**, running on Godot 4.7.
 
-This project is an unofficial fan-made Nintendo Switch port. It loads the original Android engine libraries and provides the required compatibility layer for running them on Nintendo Switch.
+This project is an unofficial fan-made Nintendo Switch port. It loads the original Android game libraries and provides the required compatibility layer for running them on Nintendo Switch.
 
 ## How to install
 
-Create the following folder on your SD card:
+1. Create `/switch/galaxian_nx/` on your SD card.
+
+2. Copy `galaxian_nx.nro` into that folder.
+
+3. Extract the following libraries from the Android version of the game:
+
+```text
+lib/arm64-v8a/libgodot_android.so
+lib/arm64-v8a/libc++_shared.so
+```
+
+Copy them into:
 
 ```text
 /switch/galaxian_nx/
 ```
 
-Place:
+4. Copy the required game data into:
 
 ```text
-galaxian_nx.nro
-libgodot_android.so
-libc++_shared.so
-config.txt
-assets/project.binary...
-save/content
-save/install.cfg
+/switch/galaxian_nx/save/
 ```
 
-The Android libraries and game data must be obtained from the original Android version.
+Your SD card should contain:
+
+```text
+/switch/galaxian_nx/
+    galaxian_nx.nro
+    config.txt
+    libgodot_android.so
+    libc++_shared.so
+    save/
+        content/
+        install.cfg
+```
+
+The original game libraries and game data are not included in this repository.
 
 ## Obtaining the game files
 
-APK can be obtained from:
+The Android version can be obtained from:
 
 https://github.com/TheWWWorm/galaxian
 
-Download the appropriate APK and launch it at least once on an Android device or Android emulator.
+Download the appropriate Android ARM64 APK.
 
-Extract:
+The APK is a ZIP archive and can be opened with 7-Zip, WinRAR or another archive utility.
+
+The required native libraries are located in:
+
+```text
+lib/arm64-v8a/
+```
+
+Copy:
+
+```text
+libgodot_android.so
+libc++_shared.so
+```
+
+to:
+
+```text
+/switch/galaxian_nx/
+```
+
+The game data can be obtained from either the original **Android or PC version** of the game.
+
+Obtain:
 
 ```text
 content/
@@ -47,9 +88,11 @@ and copy them to:
 /switch/galaxian_nx/save/
 ```
 
-These files are required to obtain the game data hash.
+## Notes
 
-Original game content is not included in this repository.
+Do not launch the application from Album/applet mode if the available memory is insufficient.
+
+Use a game override by holding **R** while launching a title, or use a forwarder.
 
 ## Controls
 
@@ -102,9 +145,9 @@ Default resolution:
 
 Higher resolutions such as `1920x1080` can also be configured.
 
-## Build
+## How to build
 
-Requires:
+You need:
 
 * devkitPro
 * devkitA64
@@ -112,13 +155,11 @@ Requires:
 * GNU Make
 * Mesa Switch port
 
-The Mesa Switch components required by this project must be built separately.
-
 Mesa for Nintendo Switch:
 
 https://github.com/NaGaa95/mesa-switch
 
-Follow the build instructions in the repository and install/build the required Switch libraries and headers before compiling this project.
+Build the required Mesa Switch libraries according to the instructions in the repository.
 
 Additional dependencies:
 
@@ -126,13 +167,13 @@ Additional dependencies:
 dkp-pacman -S switch-zlib switch-libexpat
 ```
 
-Build:
+Then build:
 
 ```bash
 make
 ```
 
-Clean build:
+For a clean build:
 
 ```bash
 make clean
@@ -159,12 +200,9 @@ galaxian_nx/
 
 ## Credits
 
-* TheWWWorm
-* Galaxy on Fire
+* TheWWWorm — Android version / game port source
 * NaGaa95 — Mesa Switch port
 * Delson / delsonazevedo
-* NaGaa95
-* ChanseyIsTheBest
 * TheFloW / fgsfds / Rinnegatamante
 * Godot Engine contributors
 * Nintendo Switch homebrew community
@@ -173,6 +211,10 @@ galaxian_nx/
 
 Galaxy on Fire and its assets, trademarks and copyrights belong to their respective rights holders.
 
-This is an unofficial fan-made port and is not affiliated with or endorsed by the original developers or publishers.
+This is an unofficial fan-made Nintendo Switch port and is not affiliated with or endorsed by the original developers or publishers.
 
-Game assets and Android libraries are not included in this repository unless explicitly provided by their respective rights holders.
+No original game assets, game data or Android libraries are included in this repository.
+
+Users should obtain the original game and required files legally.
+
+Unless specified otherwise, the source code in this repository is licensed under the MIT License. See the accompanying LICENSE file.
