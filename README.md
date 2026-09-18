@@ -23,24 +23,7 @@ Copy them into:
 /switch/galaxian_nx/
 ```
 
-4. Copy the required game data into:
-
-```text
-/switch/galaxian_nx/save/
-```
-
-Your SD card should contain:
-
-```text
-/switch/galaxian_nx/
-    galaxian_nx.nro
-    config.txt
-    libgodot_android.so
-    libc++_shared.so
-    save/
-        content/
-        install.cfg
-```
+4. Launch the port and select a **Galaxy on Fire 1 iOS IPA version 1.0.5** in the in-game file picker.
 
 The original game libraries and game data are not included in this repository.
 
@@ -90,13 +73,7 @@ The importer:
 - validates and extracts the required game catalogues, meshes, textures, sounds and language files;
 - builds a validated content cache identified by the SHA-256 of the IPA.
 
-Imported content is stored under:
-
-```text
-/switch/galaxian_nx/save/content/<sha256>/
-```
-
-The importer writes a manifest containing the imported file hashes and validates the generated content before activating it.
+The imported content is cached automatically. The importer writes a manifest containing the imported file hashes and validates the generated content before activating it.
 
 The original IPA is never modified. The bundled executable is read only as input data during import; it is not installed or executed by the Switch wrapper.
 
