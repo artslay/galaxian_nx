@@ -228,6 +228,10 @@ galaxian_nx/
 └── README.md
 ```
 
+## Third-party notices
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the third-party licensing notice covering the IPA import flow from **TheWWWorm/galaxian**.
+
 ## Credits
 
 * NaGaa95 — custom Mesa and Vulkan work.
