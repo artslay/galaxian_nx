@@ -91,6 +91,33 @@ Copy them to:
 These files are required by the port to load the original game data.
 
 
+## IPA import
+
+The Switch port can import an original Galaxy on Fire 1 iOS IPA directly from the in-game file picker.
+
+Select **Choose your Galaxy on Fire 1 IPA**. On Nintendo Switch, the Android system picker is disabled and the game's own Godot `FileDialog` is used instead.
+
+The importer:
+
+- checks that the selected file exists and is a readable IPA archive;
+- requires a compatible archive under 128 MiB;
+- locates the Galaxy on Fire 1 application bundle under `Payload/*.app/`;
+- reads the bundled executable only as an import-time data source;
+- validates and extracts the required game catalogues, meshes, textures, sounds and language files;
+- builds a validated content cache identified by the SHA-256 of the IPA.
+
+Imported content is stored under:
+
+```text
+/switch/galaxian_nx/save/content/<sha256>/
+```
+
+The importer writes a manifest containing the imported file hashes and validates the generated content before activating it.
+
+The original IPA is never modified. The bundled executable is read only as input data during import; it is not installed or executed by the Switch wrapper.
+
+This import flow is based on the original Galaxy on Fire project by **TheWWWorm**. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for licensing information.
+
 ## Notes
 
 Do not launch the application from Album/applet mode if the available memory is insufficient.
