@@ -90,9 +90,22 @@ static const ConstPatch k_save_load[] = {
   { NULL, NULL, 0.1, 0.0, 1 },
 };
 
+// The Android build uses the Android system picker for both save transfers and
+// IPA import. On Switch the underlying platform is still the Android Godot build,
+// but there is no Android Activity/SAF picker behind our fake JNI. Force Godot's
+// own FileDialog instead. main.gd contains exactly two uses of the "android"
+// feature string here: save_dialog.use_native_dialog and dialog.use_native_dialog.
+static const ConstPatch k_main[] = {
+  { "android", "nxfalse", 0.0, 0.0, 2 },
+};
+
 static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1 },
+  // main.tscn references res://src/main.gd, so exported bytecode normally lives
+  // at src/main.gdc. Keep the old scripts/ path as a fallback for older exports.
+  { "src/main.gdc", "main.gdc", k_main, 1 },
+  { "scripts/main.gdc", "main.gdc", k_main, 1 },
 };
 
 static uint32_t read_u32(const uint8_t *p) {
