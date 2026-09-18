@@ -96,7 +96,7 @@ static const ConstPatch k_save_load[] = {
 // own FileDialog instead. main.gd contains exactly two uses of the "android"
 // feature string here: save_dialog.use_native_dialog and dialog.use_native_dialog.
 static const ConstPatch k_main[] = {
-  { "android", "nx_no_native", 0.0, 0.0, 2 },
+  { "android", "nxfalse", 0.0, 0.0, 2 },
 };
 
 static const ScriptPatch k_scripts[] = {
