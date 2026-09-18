@@ -918,8 +918,20 @@ static void call_void(void *recv, FakeID *id, va_list va) {
     return;
   }
 #endif
-  // everything else (lifecycle notifications, vibrate, keyboard, immersive
-  // mode, benchmarks, TTS, multicast locks, ...) is a safe no-op
+  if (!strcmp(name, "showKeyboard")) {
+    const char *existing = obj_str(va_arg(va, void *));
+    int type = va_arg(va, int);
+    int max_input_length = va_arg(va, int);
+    int cursor_start = va_arg(va, int);
+    int cursor_end = va_arg(va, int);
+    switch_keyboard_show(existing, type, max_input_length, cursor_start, cursor_end);
+    return;
+  }
+  if (!strcmp(name, "hideKeyboard")) {
+    return;
+  }
+  // everything else (lifecycle notifications, vibrate, immersive mode,
+  // benchmarks, TTS, multicast locks, ...) is a safe no-op
 }
 
 static float call_float(void *recv, FakeID *id, va_list va) {
