@@ -50,7 +50,7 @@ The Android version can be obtained from:
 
 https://github.com/TheWWWorm/galaxian
 
-Download the appropriate Android ARM64 APK.
+Download the required Android ARM64 APK.
 
 The APK is a ZIP archive and can be opened with 7-Zip, WinRAR or another archive utility.
 
@@ -73,27 +73,11 @@ to:
 /switch/galaxian_nx/
 ```
 
-The game data can be obtained from either the original **Android or PC version** of the game.
-
-After launching the game for the first time, the following files are created:
-
-```text
-content/
-install.cfg
-```
-
-Copy them to:
-
-```text
-/switch/galaxian_nx/save/
-```
-
-These files are required by the port to load the original game data.
-
+The original game data is imported from an iOS IPA through the in-game importer.
 
 ## IPA import
 
-The Switch port can import an original Galaxy on Fire 1 iOS IPA directly from the in-game file picker.
+The Switch port can import a Galaxy on Fire 1 iOS IPA version **1.0.5** directly from the in-game file picker.
 
 Select **Choose your Galaxy on Fire 1 IPA**. On Nintendo Switch, the Android system picker is disabled and the game's own Godot `FileDialog` is used instead.
 
