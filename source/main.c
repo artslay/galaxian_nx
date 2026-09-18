@@ -366,7 +366,6 @@ static struct { u64 sw; int btn; } s_btnmap[] = {
 };
 
 static u64 s_prev_buttons = 0;
-static int s_touching = 0;
 static float s_prev_axis[6] = { 99, 99, 99, 99, 99, 99 }; // force initial send
 
 // Input is polled on the game thread right before e_step(). When e_step stalls
