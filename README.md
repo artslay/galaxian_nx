@@ -122,8 +122,7 @@ screen_height 720
 deadzone 18
 assetpack 1
 enable_vulkan 1
-touch_controls 0
-rendering_method mobile
+touch_controls 0
 ```
 
 ## Resolution
