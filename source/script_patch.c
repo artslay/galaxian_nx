@@ -103,15 +103,14 @@ static const ConstPatch k_bitmap_font[] = {
   { "mobile", "nxfalse", 0.0, 0.0, 1 },
 };
 
-/* The Switch build uses the Android/mobile bitmap atlas, but that atlas does not
- * contain every punctuation glyph (notably ASCII '-'). Use Godot's complete
- * fallback font on Switch instead. Both strings are exactly 7 bytes, so the
- * compiled GDScript size is unchanged. */
+/* Desktop mode uses Godot's complete fallback font on Switch instead of the
+ * Android/mobile bitmap atlas, whose imported glyph table does not contain every
+ * punctuation glyph (notably ASCII '-'). Both strings are exactly 7 bytes. */
 static const ScriptPatch k_scripts[] = {
-  { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2 },
-  { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1 },
-  { "src/main.gdc", "main.gdc", k_main, 1 },
-  { "src/presentation/bitmap_font.gdc", "bitmap_font.gdc", k_bitmap_font, 1 },
+  { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2, 1 },
+  { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1, 1 },
+  { "src/main.gdc", "main.gdc", k_main, 1, 0 },
+  { "src/presentation/bitmap_font.gdc", "bitmap_font.gdc", k_bitmap_font, 1, 1 },
 };
 
 static uint32_t read_u32(const uint8_t *p) {
@@ -322,18 +321,25 @@ static uint8_t *read_file(const char *path, size_t *len) {
 }
 
 void script_patches_apply(void) {
+  const int mobile = (strcmp(config.ui_mode, "mobile") == 0);
+
   for (unsigned i = 0; i < sizeof(k_scripts) / sizeof(*k_scripts); i++) {
     const ScriptPatch *script = &k_scripts[i];
 
-    /* touch_controls=1 means leave the original Android touch scripts alone.
-       Remove old generated overrides so changing the config takes effect. */
-    if (config.touch_controls) {
+    /*
+     * Mobile mode keeps the original Android/mobile UI scripts. Desktop mode
+     * applies the touch/font adjustments. The FileDialog patch in main.gdc is
+     * always applied because the Switch has no Android system picker in either
+     * UI mode.
+     */
+    if (mobile && script->desktop_only) {
       char stale[512];
       snprintf(stale, sizeof(stale), "%s/_ovr/%s", config.save_root, script->name);
       remove(stale);
-      debugPrintf("[script] %s left original (touch_controls=1)\n", script->asset);
+      debugPrintf("[script] %s left original (ui_mode=mobile)\n", script->asset);
       continue;
     }
+
     char path[512];
     snprintf(path, sizeof(path), "%s/assets/%s", config.data_root, script->asset);
     size_t file_len = 0;
@@ -344,7 +350,7 @@ void script_patches_apply(void) {
     }
     uint8_t *out = file ? patch_script(file, file_len, script) : NULL;
     if (out && script_override_write(script->name, out, file_len))
-      debugPrintf("[script] %s patched\n", script->asset);
+      debugPrintf("[script] %s patched (ui_mode=%s)\n", script->asset, config.ui_mode);
     else
       debugPrintf("[script] %s left unpatched (%s)\n", script->asset,
                   !file ? "not found" : !out ? "unexpected contents" : "write failed");
