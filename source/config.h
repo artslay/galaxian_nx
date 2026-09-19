@@ -45,6 +45,7 @@ typedef struct {
                       // (assets.nxpack/.nxidx, built on first boot) for fast SD I/O.
                       // 0 = always read the loose files.
   int enable_vulkan;  // 1 (default) = use Godot's Vulkan renderer (NVK) when the driver
+                      // comes up; 0 = force GLES3. Falls back to GLES3 if the probe fails.
   char ui_mode[16];   // "desktop" (default) or "mobile"; controls the game UI/font mode.
                       // Desktop hides mobile touch controls; mobile enables the touch UI.
   char rendering_method[32]; // override the Vulkan render method ("mobile" by default).
