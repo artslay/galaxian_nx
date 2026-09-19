@@ -1111,6 +1111,95 @@ static void load_module(so_module *mod, const char *name, void *base, size_t lim
   debugPrintf("== so_load %s ok (load_size=%u KB) ==\n", name, (unsigned)(mod->load_size >> 10));
 }
 
+static void sync_touch_setting(void) {
+  /*
+   * The game initializes settings.touch from OS.has_feature("mobile") and
+   * then restores user://settings.cfg. On Switch the Android engine can still
+   * report the mobile feature, so config.txt's touch_controls must override
+   * the saved setting before Godot calls load_settings().
+   *
+   * Preserve all other settings and replace only [options]/touch.
+   */
+  char path[512];
+  snprintf(path, sizeof(path), "%s/settings.cfg", config.save_root);
+
+  FILE *in = fopen(path, "r");
+  if (!in) {
+    FILE *out = fopen(path, "w");
+    if (!out) {
+      debugPrintf("[touch] could not create %s\n", path);
+      return;
+    }
+    fputs("[options]\n", out);
+    fprintf(out, "touch = %s\n", config.touch_controls ? "true" : "false");
+    fclose(out);
+    debugPrintf("[touch] created settings.cfg: touch=%d\n", config.touch_controls);
+    return;
+  }
+
+  char tmp_path[540];
+  snprintf(tmp_path, sizeof(tmp_path), "%s.nx", path);
+  FILE *out = fopen(tmp_path, "w");
+  if (!out) {
+    fclose(in);
+    debugPrintf("[touch] could not create temporary settings file\n");
+    return;
+  }
+
+  char line[1024];
+  int in_options = 0;
+  int touch_found = 0;
+
+  while (fgets(line, sizeof(line), in)) {
+    char *p = line;
+    while (*p == ' ' || *p == '\t') p++;
+
+    if (*p == '[') {
+      in_options = !strncmp(p, "[options]", 9) &&
+                   (p[9] == '\n' || p[9] == '\r' || p[9] == '\0');
+      fputs(line, out);
+      continue;
+    }
+
+    if (in_options) {
+      char *eq = strchr(p, '=');
+      if (eq) {
+        char key[64];
+        size_t n = (size_t)(eq - p);
+        while (n && (p[n - 1] == ' ' || p[n - 1] == '\t')) n--;
+        if (n > 0 && n < sizeof(key)) {
+          memcpy(key, p, n);
+          key[n] = '\0';
+          if (!strcmp(key, "touch")) {
+            fprintf(out, "touch = %s\n",
+                    config.touch_controls ? "true" : "false");
+            touch_found = 1;
+            continue;
+          }
+        }
+      }
+    }
+
+    fputs(line, out);
+  }
+
+  if (!touch_found) {
+    fputs(in_options ? "" : "\n[options]\n", out);
+    fprintf(out, "touch = %s\n", config.touch_controls ? "true" : "false");
+  }
+
+  fclose(in);
+  fclose(out);
+
+  if (rename(tmp_path, path) != 0) {
+    remove(tmp_path);
+    debugPrintf("[touch] could not replace settings.cfg\n");
+    return;
+  }
+
+  debugPrintf("[touch] settings.cfg forced touch=%d\n", config.touch_controls);
+}
+
 int main(void) {
   cpu_boost(1);
 
@@ -1131,6 +1220,7 @@ int main(void) {
   resolve_data_root();
 
   check_syscalls();
+  sync_touch_setting();
   stats_open();
   check_data();
   apply_asset_hotfixes(); // restore game data files known to be missing from the APK export
