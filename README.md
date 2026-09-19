@@ -117,9 +117,24 @@ screen_height 720
 deadzone 18
 assetpack 1
 enable_vulkan 1
-touch_controls 0
+ui_mode desktop
 
 ```
+## UI mode
+
+Use `ui_mode` to select the game interface mode:
+
+```text
+ui_mode desktop
+```
+
+Supported values:
+
+- `desktop` — desktop/scalable font and layout, without the mobile on-screen controls.
+- `mobile` — mobile bitmap font/layout and the on-screen touch controls.
+
+The setting controls the UI mode of the original Android game. It does not change the renderer or the configured render resolution.
+
 ## Resolution
 
 The default resolution is:
