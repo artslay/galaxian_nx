@@ -6,36 +6,34 @@ This project is an unofficial fan-made Nintendo Switch port. It loads the origin
 
 ## How to install
 
-1. Create `/switch/galaxian_nx/` on your SD card.
-
-2. Copy `galaxian_nx.nro` into that folder.
-
-3. Extract the following libraries from the Android version of the game:
-
-```text
-lib/arm64-v8a/libgodot_android.so
-lib/arm64-v8a/libc++_shared.so
-```
-
-Copy them into:
+Create the following folder on your SD card:
 
 ```text
 /switch/galaxian_nx/
 ```
 
-4. Launch the port and select a **Galaxy on Fire 1 iOS IPA version 1.0.5** in the in-game file picker.
+Place the following files inside:
+
+```text
+/switch/galaxian_nx/
+├── galaxian_nx.nro
+├── libgodot_android.so
+├── libc++_shared.so
+├── config.txt
+└── assets/
+    ├── project.binary
+    └── ...
+```
+
+The Android libraries and game data must be obtained from the original Android version of the game.
 
 The original game libraries and game data are not included in this repository.
 
 ## Obtaining the game files
 
-The Android version can be obtained from:
+The original Android APK can be obtained from the [galaxian repository](https://github.com/TheWWWorm/galaxian).
 
-https://github.com/TheWWWorm/galaxian
-
-Download the required Android ARM64 APK.
-
-The APK is a ZIP archive and can be opened with 7-Zip, WinRAR or another archive utility.
+Open the APK with an archive utility such as 7-Zip or WinRAR.
 
 The required native libraries are located in:
 
@@ -56,7 +54,11 @@ to:
 /switch/galaxian_nx/
 ```
 
-The original game data is imported from an iOS IPA through the in-game importer.
+Copy the complete `assets/` folder to:
+
+```text
+/switch/galaxian_nx/assets/
+```
 
 ## IPA import
 
@@ -122,7 +124,8 @@ screen_height 720
 deadzone 18
 assetpack 1
 enable_vulkan 1
-touch_controls 0
+touch_controls 0
+
 ```
 
 ## Resolution
