@@ -102,11 +102,13 @@ static const ConstPatch k_main[] = {
 
 static const ConstPatch k_bitmap_font[] = {
   { "mobile", "nxfalse", 0.0, 0.0, 1 },
+  { NULL, NULL, 0.5, 1.0, 1 },
 };
 
-/* Desktop mode uses Godot's complete fallback font on Switch instead of the
- * Android/mobile bitmap atlas, whose imported glyph table does not contain every
- * punctuation glyph (notably ASCII '-'). Both strings are exactly 7 bytes. */
+/* Both UI modes use Godot's complete fallback font on Switch because the
+ * Android/mobile bitmap atlas does not contain every punctuation glyph (notably
+ * ASCII '-'). The second patch keeps the mobile composition scale at 1.0 even
+ * though the font path is the fallback path. */
 static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2, 1 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1, 1 },
