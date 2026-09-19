@@ -134,10 +134,8 @@ ui_mode desktop
 
 Supported values:
 
-- `desktop` — desktop/scalable font and layout, without the mobile on-screen controls.
-- `mobile` — mobile bitmap font/layout and the on-screen touch controls.
-
-The setting controls the UI mode of the original Android game. It does not change the renderer or the configured render resolution.
+- `desktop` — desktop/scalable layout
+- `mobile` — mobile bitmap layout
 
 ## Resolution
 
