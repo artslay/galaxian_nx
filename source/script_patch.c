@@ -71,6 +71,7 @@ typedef struct {
   const char *name;     // override file name (the .gdc basename)
   const ConstPatch *patches;
   unsigned count;
+  int desktop_only;     // remove/skip this override in mobile UI mode
 } ScriptPatch;
 
 // Touch controls are meant for phones; the Switch has a controller. touch_controls.gd
