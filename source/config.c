@@ -71,6 +71,9 @@ int read_config(const char *file) {
       }
     }
   } while (!feof(f));
+  if (strcmp(config.ui_mode, "mobile") != 0 && strcmp(config.ui_mode, "desktop") != 0)
+    strlcpy(config.ui_mode, "desktop", sizeof(config.ui_mode));
+
 
   fclose(f);
   return 0;
@@ -87,9 +90,6 @@ int write_config(const char *file) {
   #undef CONFIG_VAR_INT
   #undef CONFIG_VAR_STR
 
-  if (strcmp(config.ui_mode, "mobile") != 0 && strcmp(config.ui_mode, "desktop") != 0)
-    strlcpy(config.ui_mode, "desktop", sizeof(config.ui_mode));
-
-  fclose(f);
+fclose(f);
   return 0;
 }
