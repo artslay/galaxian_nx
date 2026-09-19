@@ -113,7 +113,7 @@ static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2, 1 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1, 1 },
   { "src/main.gdc", "main.gdc", k_main, 1, 0 },
-  { "src/presentation/bitmap_font.gdc", "bitmap_font.gdc", k_bitmap_font, 1, 1 },
+  { "src/presentation/bitmap_font.gdc", "bitmap_font.gdc", k_bitmap_font, 2, 0 },
 };
 
 static uint32_t read_u32(const uint8_t *p) {
