@@ -99,6 +99,14 @@ static const ConstPatch k_main[] = {
   { "android", "nxfalse", 0.0, 0.0, 2 },
 };
 
+static const ConstPatch k_bitmap_font[] = {
+  { "mobile", "nxfalse", 0.0, 0.0, 1 },
+};
+
+/* The Switch build uses the Android/mobile bitmap atlas, but that atlas does not
+ * contain every punctuation glyph (notably ASCII '-'). Use Godot's complete
+ * fallback font on Switch instead. Both strings are exactly 7 bytes, so the
+ * compiled GDScript size is unchanged. */
 static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1 },
