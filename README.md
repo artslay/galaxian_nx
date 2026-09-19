@@ -87,8 +87,6 @@ Do not launch the application from Album/applet mode if the available memory is 
 
 Use a game override by holding **R** while launching a title, or use a forwarder.
 
-Touch Controls
-
 Touch Controls can be enabled or disabled independently in the in-game settings.
 
 Enabling on-screen touch controls increases CPU/GPU load due to continuous touch interface processing and rendering, which may reduce FPS. For better performance, playing with Touch Controls disabled is recommended.
