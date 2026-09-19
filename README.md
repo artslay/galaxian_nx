@@ -107,13 +107,6 @@ Use a game override by holding **R** while launching a title, or use a forwarder
 | +               | Start         |
 | -               | Back          |
 
-Default configuration:
-
-```text
-deadzone 18
-touch_controls 0
-```
-
 ## Configuration
 
 `config.txt`:
@@ -127,16 +120,25 @@ enable_vulkan 1
 touch_controls 0
 
 ```
-
 ## Resolution
 
-Default resolution:
+The default resolution is:
 
 ```text
-1280x720
+screen_width 1280
+screen_height 720
 ```
 
-Higher resolutions such as `1920x1080` can also be configured.
+The resolution can be changed in `config.txt`.
+
+For example:
+
+```text
+screen_width 1920
+screen_height 1080
+```
+
+Lower resolutions can be used to reduce rendering load.
 
 ## How to build
 
