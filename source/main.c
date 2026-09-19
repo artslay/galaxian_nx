@@ -1111,6 +1111,97 @@ static void load_module(so_module *mod, const char *name, void *base, size_t lim
   debugPrintf("== so_load %s ok (load_size=%u KB) ==\n", name, (unsigned)(mod->load_size >> 10));
 }
 
+static int ui_mode_mobile(void) {
+  return strcmp(config.ui_mode, "mobile") == 0;
+}
+
+static void sync_ui_mode_setting(void) {
+  /*
+   * The game initializes settings.touch from OS.has_feature("mobile") and then
+   * restores user://settings.cfg. config.txt's ui_mode is authoritative:
+   * "mobile" enables the mobile touch UI, while "desktop" disables it.
+   *
+   * Preserve all other settings and replace only [options]/touch.
+   */
+  const int mobile = ui_mode_mobile();
+  char path[512];
+  snprintf(path, sizeof(path), "%s/settings.cfg", config.save_root);
+
+  FILE *in = fopen(path, "r");
+  if (!in) {
+    FILE *out = fopen(path, "w");
+    if (!out) {
+      debugPrintf("[ui] could not create %s\n", path);
+      return;
+    }
+    fputs("[options]\n", out);
+    fprintf(out, "touch = %s\n", mobile ? "true" : "false");
+    fclose(out);
+    debugPrintf("[ui] created settings.cfg: ui_mode=%s touch=%d\n", config.ui_mode, mobile);
+    return;
+  }
+
+  char tmp_path[540];
+  snprintf(tmp_path, sizeof(tmp_path), "%s.nx", path);
+  FILE *out = fopen(tmp_path, "w");
+  if (!out) {
+    fclose(in);
+    debugPrintf("[ui] could not create temporary settings file\n");
+    return;
+  }
+
+  char line[1024];
+  int in_options = 0;
+  int touch_found = 0;
+
+  while (fgets(line, sizeof(line), in)) {
+    char *p = line;
+    while (*p == ' ' || *p == '\t') p++;
+
+    if (*p == '[') {
+      in_options = !strncmp(p, "[options]", 9) &&
+                   (p[9] == '\n' || p[9] == '\r' || p[9] == '\0');
+      fputs(line, out);
+      continue;
+    }
+
+    if (in_options) {
+      char *eq = strchr(p, '=');
+      if (eq) {
+        char key[64];
+        size_t n = (size_t)(eq - p);
+        while (n && (p[n - 1] == ' ' || p[n - 1] == '\t')) n--;
+        if (n > 0 && n < sizeof(key)) {
+          memcpy(key, p, n);
+          key[n] = '\0';
+          if (!strcmp(key, "touch")) {
+            fprintf(out, "touch = %s\n", mobile ? "true" : "false");
+            touch_found = 1;
+            continue;
+          }
+        }
+      }
+    }
+
+    fputs(line, out);
+  }
+
+  if (!touch_found) {
+    fputs(in_options ? "" : "\n[options]\n", out);
+    fprintf(out, "touch = %s\n", mobile ? "true" : "false");
+  }
+
+  fclose(in);
+  fclose(out);
+
+  if (rename(tmp_path, path) != 0) {
+    remove(tmp_path);
+    debugPrintf("[ui] could not replace settings.cfg\n");
+    return;
+  }
+
+  debugPrintf("[ui] settings.cfg forced ui_mode=%s touch=%d\n", config.ui_mode, mobile);
+}
 int main(void) {
   cpu_boost(1);
 
@@ -1135,6 +1226,7 @@ int main(void) {
   check_data();
   apply_asset_hotfixes(); // restore game data files known to be missing from the APK export
   mkdir(config.save_root, 0777);
+  sync_ui_mode_setting();
   {
     char cache[300];
     // Godot's GLES3 rasterizer creates user://shader_cache at boot; if that
