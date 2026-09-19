@@ -1220,11 +1220,11 @@ int main(void) {
   resolve_data_root();
 
   check_syscalls();
-  sync_touch_setting();
   stats_open();
   check_data();
   apply_asset_hotfixes(); // restore game data files known to be missing from the APK export
   mkdir(config.save_root, 0777);
+  sync_touch_setting();
   {
     char cache[300];
     // Godot's GLES3 rasterizer creates user://shader_cache at boot; if that
