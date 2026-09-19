@@ -1111,15 +1111,19 @@ static void load_module(so_module *mod, const char *name, void *base, size_t lim
   debugPrintf("== so_load %s ok (load_size=%u KB) ==\n", name, (unsigned)(mod->load_size >> 10));
 }
 
-static void sync_touch_setting(void) {
+static int ui_mode_mobile(void) {
+  return strcmp(config.ui_mode, "mobile") == 0;
+}
+
+static void sync_ui_mode_setting(void) {
   /*
-   * The game initializes settings.touch from OS.has_feature("mobile") and
-   * then restores user://settings.cfg. On Switch the Android engine can still
-   * report the mobile feature, so config.txt's touch_controls must override
-   * the saved setting before Godot calls load_settings().
+   * The game initializes settings.touch from OS.has_feature("mobile") and then
+   * restores user://settings.cfg. config.txt's ui_mode is authoritative:
+   * "mobile" enables the mobile touch UI, while "desktop" disables it.
    *
    * Preserve all other settings and replace only [options]/touch.
    */
+  const int mobile = ui_mode_mobile();
   char path[512];
   snprintf(path, sizeof(path), "%s/settings.cfg", config.save_root);
 
@@ -1127,13 +1131,13 @@ static void sync_touch_setting(void) {
   if (!in) {
     FILE *out = fopen(path, "w");
     if (!out) {
-      debugPrintf("[touch] could not create %s\n", path);
+      debugPrintf("[ui] could not create %s\n", path);
       return;
     }
     fputs("[options]\n", out);
-    fprintf(out, "touch = %s\n", config.touch_controls ? "true" : "false");
+    fprintf(out, "touch = %s\n", mobile ? "true" : "false");
     fclose(out);
-    debugPrintf("[touch] created settings.cfg: touch=%d\n", config.touch_controls);
+    debugPrintf("[ui] created settings.cfg: ui_mode=%s touch=%d\n", config.ui_mode, mobile);
     return;
   }
 
@@ -1142,7 +1146,7 @@ static void sync_touch_setting(void) {
   FILE *out = fopen(tmp_path, "w");
   if (!out) {
     fclose(in);
-    debugPrintf("[touch] could not create temporary settings file\n");
+    debugPrintf("[ui] could not create temporary settings file\n");
     return;
   }
 
@@ -1171,8 +1175,7 @@ static void sync_touch_setting(void) {
           memcpy(key, p, n);
           key[n] = '\0';
           if (!strcmp(key, "touch")) {
-            fprintf(out, "touch = %s\n",
-                    config.touch_controls ? "true" : "false");
+            fprintf(out, "touch = %s\n", mobile ? "true" : "false");
             touch_found = 1;
             continue;
           }
@@ -1185,7 +1188,7 @@ static void sync_touch_setting(void) {
 
   if (!touch_found) {
     fputs(in_options ? "" : "\n[options]\n", out);
-    fprintf(out, "touch = %s\n", config.touch_controls ? "true" : "false");
+    fprintf(out, "touch = %s\n", mobile ? "true" : "false");
   }
 
   fclose(in);
@@ -1193,13 +1196,12 @@ static void sync_touch_setting(void) {
 
   if (rename(tmp_path, path) != 0) {
     remove(tmp_path);
-    debugPrintf("[touch] could not replace settings.cfg\n");
+    debugPrintf("[ui] could not replace settings.cfg\n");
     return;
   }
 
-  debugPrintf("[touch] settings.cfg forced touch=%d\n", config.touch_controls);
+  debugPrintf("[ui] settings.cfg forced ui_mode=%s touch=%d\n", config.ui_mode, mobile);
 }
-
 int main(void) {
   cpu_boost(1);
 
@@ -1224,7 +1226,7 @@ int main(void) {
   check_data();
   apply_asset_hotfixes(); // restore game data files known to be missing from the APK export
   mkdir(config.save_root, 0777);
-  sync_touch_setting();
+  sync_ui_mode_setting();
   {
     char cache[300];
     // Godot's GLES3 rasterizer creates user://shader_cache at boot; if that
