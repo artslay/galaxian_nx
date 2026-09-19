@@ -13,7 +13,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 TARGET		:=	galaxian_nx
 APP_TITLE	:=	Galaxy on Fire Navite Remake
 APP_AUTHOR	:=	artslay
-APP_VERSION	:=	1.0.0
+APP_VERSION	:=	1.0.3
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
