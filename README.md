@@ -57,7 +57,7 @@ to:
 Copy the complete `assets/` folder to:
 
 ```text
-/switch/galaxian_nx/assets/
+/switch/galaxian_nx/
 ```
 
 ## IPA import
