@@ -712,7 +712,8 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
   free(*data);
   *data = out;
   *len = new_len;
-  debugPrintf("[font] injected '.' glyph into %u AEI font table(s)\n", patch_count);
+  debugPrintf("[font] injected '.' glyph into %u AEI font table(s) (atlas %ux%u -> %ux%u)\n",
+              patch_count, width, height, width, (uint16_t)(height + added_rows));
   return 1;
 }
 
@@ -949,19 +950,8 @@ int prepare_font_aei_override(const char *source_path, char *out, size_t out_siz
   char override_path[768];
   snprintf(override_path, sizeof(override_path), "%s/_ovr/%s", config.save_root, base);
 
-  /*
-   * If this atlas was already prepared this boot, just reuse it. The override
-   * is only registered after a successful write, so resolve_gd_path can redirect
-   * subsequent opens before they reach this function.
-   */
-  struct stat ost;
-  if (stat(override_path, &ost) == 0 && ost.st_size > 0) {
-    register_font_aei_override(base);
-    if (snprintf(out, out_size, "%s", override_path) >= (int)out_size)
-      return 0;
-    return 1;
-  }
-
+  /* Always regenerate from the ROMFS/source asset. Never trust a stale _ovr AEI. */
+  remove(override_path);
   void *raw = NULL;
   size_t raw_len = 0;
   int loaded = 0;
@@ -997,6 +987,7 @@ int prepare_font_aei_override(const char *source_path, char *out, size_t out_siz
      * override; the original asset remains the source of truth.
      */
     free(bytes);
+    debugPrintf("[font] no '.' repair for %s\n", source_path);
     return 0;
   }
 
