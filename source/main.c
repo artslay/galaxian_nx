@@ -863,41 +863,11 @@ static void game_thread_fn(void *arg) {
 #if GODOT_VERBOSE
   args[nargs++] = "--verbose";
 #endif
-  // Disable Android frame pacing (Swappy). Godot's Android Vulkan backend links
-  // Google's Swappy frame-pacing library, which spawns ChoreographerFilter threads
-  // that wait on an Android Choreographer callback. There is no Choreographer on
-  // Switch, so they never wake -- and when a present hiccup (e.g. VkResult -3)
-  // makes Godot recreate the swapchain, Swappy's destructor JOINS those threads
-  // forever (game thread stuck in pthread_join <- ~ChoreographerFilter <- swapchain
-  // teardown -> whole engine hangs, black screen). override.cfg turns it off. res://
-  // is the assets dir (read via AAsset with a loose-file fallback), so the file goes
-  // there; a copy at data_root covers the game.pck path too.
-  // vsync_mode=3 is only what the engine starts with: since 1.00.9 the game applies
-  // its own V-Sync option at boot (DisplayServer.window_set_vsync_mode, saved in
-  // user://galaxianWindowSettings.json), and NVK on Switch presents FIFO either way.
-  if (s_use_vulkan) {
-    const char *ovr_body =
-      "; Written by the wrapper: this console has no Android Choreographer, so\n"
-      "; Godot's Swappy frame pacing would deadlock on swapchain recreation.\n"
-      "; vsync_mode=3 (mailbox): with the GPU at full clock, most scenes finish in\n"
-      "; ~18 ms -- just over the 16.7 ms vblank -- and plain FIFO would hard-lock\n"
-      "; them to 30 fps with the GPU sitting ~50% idle. Mailbox lets the native\n"
-      "; ~40-55 fps through with no tearing. (If NVK ignores it and falls back to\n"
-      "; FIFO, the only other lever is a smaller render size in config.txt.)\n"
-      "; Delete this file to restore Godot's default.\n"
-      "\n[display]\n\n"
-      "window/frame_pacing/android/enable_frame_pacing=false\n"
-      "window/vsync/vsync_mode=3\n";
-    char ovrp[400];
-    snprintf(ovrp, sizeof(ovrp), "%s/assets/override.cfg", config.data_root);
-    FILE *of = fopen(ovrp, "w");
-    if (of) { fputs(ovr_body, of); fclose(of);
-              debugPrintf(">> wrote %s (Android frame pacing disabled)\n", ovrp); }
-    else debugPrintf(">> COULD NOT write %s -- Swappy may deadlock on swapchain recreate\n", ovrp);
-    snprintf(ovrp, sizeof(ovrp), "%s/override.cfg", config.data_root);
-    of = fopen(ovrp, "w");
-    if (of) { fputs(ovr_body, of); fclose(of); }
-  }
+  // Disable Android frame pacing (Swappy) through our writable _ovr file.
+  // The actual game payload is read-only in ROMFS, so never write override.cfg
+  // into romfs:/assets.
+  if (s_use_vulkan)
+    write_frame_pacing_override();
 
   void *cmdline = jni_new_string_array(nargs, args);
 
