@@ -187,8 +187,34 @@ static int is_fake_file(const void *f) {
 // paths pass through untouched.
 const char *sandbox_path(const char *path, char *buf, size_t sz) {
   if (!path || path[0] != '/') return path;
-  if (strncmp(path, "/switch", 7) == 0) return path;
-  if (strncmp(path, "/dev", 4) == 0 || strncmp(path, "/proc", 5) == 0) return path;
+
+  // The Android game may occasionally bypass the Java FileAccess bridge and
+  // hand us the physical application path directly. After APK->NRO packing,
+  // assets and the two Android libraries live in ROMFS, so redirect those reads.
+  static const char app_root[] = "/switch/galaxian_nx";
+  static const size_t app_root_len = sizeof(app_root) - 1;
+  if (!strncmp(path, app_root, app_root_len)) {
+    const char *rest = path + app_root_len;
+    if (*rest == '\0')
+      return path;
+    if (!strncmp(rest, "/assets/", 8) || !strcmp(rest, "/assets")) {
+      const char *rel = rest + 8;
+      snprintf(buf, sz, "romfs:/assets/%s", rel);
+      return buf;
+    }
+    if (!strncmp(rest, "/lib", 4)) {
+      snprintf(buf, sz, "romfs:%s", rest);
+      return buf;
+    }
+    // Keep config/saves on the writable SD tree.
+    return path;
+  }
+
+  if (strncmp(path, "/dev", 4) == 0 || strncmp(path, "/proc", 5) == 0)
+    return path;
+  if (strncmp(path, "/switch", 7) == 0)
+    return path;
+
   snprintf(buf, sz, "%s%s", config.save_root, path);
   return buf;
 }
