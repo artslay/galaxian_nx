@@ -369,6 +369,13 @@ void script_patches_apply(void) {
 
     char path[512];
     snprintf(path, sizeof(path), "%s/assets/%s", config.data_root, script->asset);
+
+    // Never leave a previous generated override in place when the source script
+    // changed or a patch no longer matches. Otherwise the stale .gdc silently
+    // masks the new asset and makes runtime testing misleading.
+    char stale[512];
+    snprintf(stale, sizeof(stale), "%s/_ovr/%s", config.save_root, script->name);
+    remove(stale);
     size_t file_len = 0;
     uint8_t *file = read_file(path, &file_len);
     if (!file && asset_pack_active()) {
