@@ -438,6 +438,18 @@ static int gd_file_open(const char *path, int mode) {
   char buf[512];
   resolve_gd_path(ACCESS_FILESYSTEM, path, buf, sizeof(buf));
 
+  /*
+   * The imported Galaxy library reads its AEI font atlas through Godot's
+   * FileAccessHandler. Give the wrapper a chance to stage a repaired copy before
+   * the real fopen, so Original bitmap text receives a visible '.' without any
+   * game-source changes.
+   */
+  if (mode == GD_READ) {
+    char font_override[768];
+    if (prepare_font_aei_override(buf, font_override, sizeof(font_override)))
+      snprintf(buf, sizeof(buf), "%s", font_override);
+  }
+
   if (mode != GD_READ)
     ensure_parent_dirs(buf);
 
