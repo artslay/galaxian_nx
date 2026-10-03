@@ -87,14 +87,20 @@ static void check_syscalls(void) {
 
 static void check_data(void) {
   struct stat st;
-  if (stat(SO_NAME, &st) < 0)
+  char path[320];
+
+  snprintf(path, sizeof(path), "%s/%s", config.data_root, SO_NAME);
+  if (stat(path, &st) < 0)
     fatal_error("Could not find bundled\n%s.", path);
-  if (stat(CXX_SO_NAME, &st) < 0)
+
+  snprintf(path, sizeof(path), "%s/%s", config.data_root, CXX_SO_NAME);
+  if (stat(path, &st) < 0)
     fatal_error("Could not find bundled\n%s.", path);
-  char assets[300];
+
+  char assets[320];
   snprintf(assets, sizeof(assets), "%s/assets/project.binary", config.data_root);
   if (stat(assets, &st) < 0)
-    fatal_error("Could not find bundled\nassets/project.binary.");
+    fatal_error("Could not find bundled\n%s.", assets);
 }
 
 // Resolve the app data directory. Prefer the payload bundled in the NRO ROMFS;
@@ -1228,7 +1234,7 @@ int main(void) {
   char config_path[320];
   snprintf(config_path, sizeof(config_path), "%s/%s", config.save_root, CONFIG_NAME);
   if (read_config(config_path) != 0 && write_config(config_path) != 0)
-    debugPrintf("[config] could not create %s\\n", config_path);
+    debugPrintf("[config] could not create %s\n", config_path);
 
   // read_config() resets the runtime roots to their compile-time defaults.
   // Resolve once more so the bundled ROMFS payload remains authoritative.
@@ -1261,7 +1267,7 @@ int main(void) {
   // the driver's small-buffer allocator and corrupts its pool.
   {
     static char scache[300];
-    snprintf(scache, sizeof(scache), "%s/shadercache", config.data_root);
+    snprintf(scache, sizeof(scache), "%s/shadercache", config.save_root);
     mkdir(scache, 0777);
     // Select the GL driver and point the gallium loader at it. The on-disk
     // shader cache (MESA_SHADER_CACHE_*, old MESA_GLSL_CACHE_* as aliases)
