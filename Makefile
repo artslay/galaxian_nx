@@ -17,6 +17,14 @@ APP_VERSION	:=	1.0.3
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
+
+# Bundle the original Android APK payload into the NRO ROMFS. The APK itself is
+# never copied to the NRO; only assets/ and the two arm64-v8a shared libraries are kept.
+APK		?= $(CURDIR)/galaxian.apk
+ROMFS_STAGE	:= $(TOPDIR)/$(BUILD)/romfs-stage
+ROMFS		:= $(ROMFS_STAGE)
+export ROMFS
+
 INCLUDES	:=	source
 
 #---------------------------------------------------------------------------------
@@ -137,16 +145,33 @@ endif
 .PHONY: $(BUILD) clean all
 
 #---------------------------------------------------------------------------------
-all: $(BUILD)
+all: $(ROMFS_STAGE)/.stamp $(BUILD)
 
-$(BUILD):
+$(ROMFS_STAGE)/.stamp: $(APK) $(TOPDIR)/Makefile
+	@echo Preparing bundled APK payload...
+	@test -f "$(APK)" || (echo "APK not found: $(APK)"; exit 1)
+	@rm -rf "$(ROMFS_STAGE)"
+	@mkdir -p "$(ROMFS_STAGE)"
+	@unzip -q -o "$(APK)" -d "$(ROMFS_STAGE)/.apk"
+	@test -d "$(ROMFS_STAGE)/.apk/assets" || (echo "APK is missing assets/"; exit 1)
+	@test -f "$(ROMFS_STAGE)/.apk/lib/arm64-v8a/libgodot_android.so" || (echo "APK is missing lib/arm64-v8a/libgodot_android.so"; exit 1)
+	@test -f "$(ROMFS_STAGE)/.apk/lib/arm64-v8a/libc++_shared.so" || (echo "APK is missing lib/arm64-v8a/libc++_shared.so"; exit 1)
+	@rm -rf "$(ROMFS_STAGE)/.apk/assets/dexopt"
+	@mkdir -p "$(ROMFS_STAGE)/assets"
+	@cp -a "$(ROMFS_STAGE)/.apk/assets/." "$(ROMFS_STAGE)/assets/"
+	@cp "$(ROMFS_STAGE)/.apk/lib/arm64-v8a/libgodot_android.so" "$(ROMFS_STAGE)/"
+	@cp "$(ROMFS_STAGE)/.apk/lib/arm64-v8a/libc++_shared.so" "$(ROMFS_STAGE)/"
+	@rm -rf "$(ROMFS_STAGE)/.apk"
+	@touch "$@"
+
+$(BUILD): $(ROMFS_STAGE)/.stamp
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf $(ROMFS_STAGE)
 
 #---------------------------------------------------------------------------------
 else
