@@ -64,6 +64,9 @@ typedef struct {
   double value;         // float literal to find
   double new_value;
   uint32_t uses;        // LITERAL tokens that must reference it
+  int is_int;            // nonzero for integer literal match/rewrite
+  int64_t int_value;
+  int64_t new_int_value;
 } ConstPatch;
 
 typedef struct {
@@ -100,10 +103,22 @@ static const ConstPatch k_main[] = {
   { "android", "nxfalse", 0.0, 0.0, 2 },
 };
 
+// library.gd: Text Font = Auto must switch to scalable text when the imported
+// bitmap atlas is missing any glyph, including ASCII punctuation such as '.'.
+// The original code exempted ASCII first and then only classified letters/CJK.
+// These exact integer literals are the thresholds in that logic; changing both
+// to zero makes every missing glyph take the existing scalable path.
+// Explicit "Original" mode is untouched.
+static const ConstPatch k_library[] = {
+  { NULL, NULL, 0.0, 0.0, 1, 1, 128, 0 },
+  { NULL, NULL, 0.0, 0.0, 1, 1, 11904, 0 },
+};
+
 static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2, 1 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1, 1 },
   { "src/main.gdc", "main.gdc", k_main, 1, 0 },
+  { "src/content/library.gdc", "library.gdc", k_library, 2, 0 },
 };
 
 static uint32_t read_u32(const uint8_t *p) {
@@ -145,6 +160,19 @@ static int constant_matches(const uint8_t *c, const ConstPatch *patch) {
     return (header == VARIANT_STRING || header == VARIANT_STRING_NAME) &&
            read_u32(c + 4) == n && !memcmp(c + 8, patch->text, n);
   }
+  if (patch->is_int) {
+    int64_t v = 0;
+    if (header == (VARIANT_INT | VARIANT_FLAG_64)) {
+      memcpy(&v, c + 4, sizeof(v));
+    } else if (header == VARIANT_INT) {
+      int32_t i;
+      memcpy(&i, c + 4, sizeof(i));
+      v = i;
+    } else {
+      return 0;
+    }
+    return v == patch->int_value;
+  }
   double v;
   if (header == (VARIANT_FLOAT | VARIANT_FLAG_64)) {
     memcpy(&v, c + 4, sizeof(v));
@@ -161,6 +189,13 @@ static int constant_matches(const uint8_t *c, const ConstPatch *patch) {
 static void constant_rewrite(uint8_t *c, const ConstPatch *patch) {
   if (patch->text) {
     memcpy(c + 8, patch->new_text, strlen(patch->new_text));
+  } else if (patch->is_int) {
+    if (read_u32(c) & VARIANT_FLAG_64) {
+      memcpy(c + 4, &patch->new_int_value, sizeof(patch->new_int_value));
+    } else {
+      const int32_t v = (int32_t)patch->new_int_value;
+      memcpy(c + 4, &v, sizeof(v));
+    }
   } else if (read_u32(c) & VARIANT_FLAG_64) {
     memcpy(c + 4, &patch->new_value, sizeof(patch->new_value));
   } else {
