@@ -542,8 +542,25 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
           !w || !h)
         return 0;
       if (code == 46) {
-        dot_found = 1;
-        break;
+        /* Treat a formally present but fully transparent '.' as broken. */
+        int visible = 0;
+        for (uint16_t row = 0; row < h && !visible; row++) {
+          for (uint16_t col = 0; col < w; col++) {
+            const size_t off =
+              image_start +
+              ((size_t)y + row) * width * 4u +
+              ((size_t)x + col) * 4u;
+            if (src[off + 3] != 0) {
+              visible = 1;
+              break;
+            }
+          }
+        }
+        if (visible) {
+          dot_found = 1;
+          break;
+        }
+        /* Blank '.' falls through to the repair path below. */
       }
 
       /*
