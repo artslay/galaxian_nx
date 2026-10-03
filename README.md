@@ -94,7 +94,11 @@ Enabling on-screen touch controls increases CPU/GPU load due to continuous touch
 
 ## Configuration
 
-`config.txt`:
+The configuration file is:
+
+```text
+/switch/galaxian_nx/save/config.txt
+```
 
 ```text
 screen_width 1280
