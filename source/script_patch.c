@@ -63,7 +63,7 @@ typedef struct {
   const char *new_text; // same-length replacement
   double value;         // float literal to find
   double new_value;
-  uint32_t uses;        // LITERAL tokens that must reference it
+  uint32_t uses;        // LITERAL tokens that must reference it; UINT32_MAX = any count
   int is_int;            // nonzero for integer literal match/rewrite
   int64_t int_value;
   int64_t new_int_value;
@@ -106,12 +106,11 @@ static const ConstPatch k_main[] = {
 // library.gd: Text Font = Auto must switch to scalable text when the imported
 // bitmap atlas is missing any glyph, including ASCII punctuation such as '.'.
 // The original code exempted ASCII first and then only classified letters/CJK.
-// These exact integer literals are the thresholds in that logic; changing both
-// to zero makes every missing glyph take the existing scalable path.
+// Force the 0x2E80 threshold to zero; the existing condition then recognizes
+// every missing code point in Auto mode, including ASCII punctuation.
 // Explicit "Original" mode is untouched.
 static const ConstPatch k_library[] = {
-  { NULL, NULL, 0.0, 0.0, 1, 1, 128, 0 },
-  { NULL, NULL, 0.0, 0.0, 1, 1, 11904, 0 },
+  { NULL, NULL, 0.0, 0.0, UINT32_MAX, 1, 11904, 0 },
 };
 
 static const ScriptPatch k_scripts[] = {
@@ -257,7 +256,7 @@ static int patch_token_buffer(uint8_t *buf, size_t len, const ConstPatch *patche
       debugPrintf("[script]   constant %u: %u matches, expected 1\n", k, found);
       goto done;
     }
-    if (uses[target[k]] != patches[k].uses) {
+    if (patches[k].uses != UINT32_MAX && uses[target[k]] != patches[k].uses) {
       debugPrintf("[script]   constant %u: %u uses, expected %u\n", k, uses[target[k]], patches[k].uses);
       goto done;
     }
