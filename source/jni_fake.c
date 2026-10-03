@@ -239,17 +239,29 @@ static FakeID *get_id(const char *name, const char *sig) {
 // defensively strip a leaked data_root prefix too (a stale resource_path
 // derived from the wrapper cwd shows up as "switch/galaxian_nx/X").
 static const char *strip_data_root(const char *p) {
-  const char *root = config.data_root; // "/switch/galaxian_nx"
+  // Godot's Android glue can hand the resource bridge a path derived from
+  // /proc/self/exe even though the actual payload is now in romfs:/. Strip the
+  // physical application root before prepending the ROMFS assets root.
+  const char *roots[] = { "switch/galaxian_nx", "switch/galaxian_nx/assets" };
+  for (size_t i = 0; i < sizeof(roots) / sizeof(roots[0]); i++) {
+    const size_t n = strlen(roots[i]);
+    if (!strncmp(p, roots[i], n) && (p[n] == '/' || p[n] == '\0')) {
+      const char *rest = p + n;
+      while (*rest == '/') rest++;
+      return rest;
+    }
+  }
+
+  const char *root = config.data_root;
   if (root[0] == '/' && !strncmp(p, root + 1, strlen(root) - 1)) {
     const char *rest = p + strlen(root) - 1;
-    if (*rest == '/' || *rest == 0) {
+    if (*rest == '/' || *rest == '\0') {
       while (*rest == '/') rest++;
       return rest;
     }
   }
   return p;
 }
-
 static const char *resolve_gd_path(int access_type, const char *p, char *buf, size_t sz) {
   if (!p) p = "";
   if (!strncmp(p, "res://", 6)) {
