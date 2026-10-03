@@ -18,7 +18,7 @@
 #define DEFAULT_SAVE_ROOT "/switch/galaxian_nx/save"
 
 // absolute so the log lands in the app dir regardless of the launch CWD
-#define LOG_PATH DEFAULT_DATA_ROOT "/galaxian_debug.log"
+#define LOG_PATH DEFAULT_SAVE_ROOT "/galaxian_debug.log"
 
 // Master debug switch: log file (<data_root>/galaxian_debug.log), boot_stats.txt,
 // nxlink stdout, and all debugPrintf/[io]/[audio] output. Set to 1 to diagnose
@@ -40,8 +40,8 @@ typedef struct {
   int screen_width;   // render width  (config.txt); with the GPU/vsync this sets
   int screen_height;  // render height (config.txt); the framerate. Default 1280x720.
   int deadzone;       // analog stick deadzone, percent (0 disables); default 18
-  int assetpack;      // 1 (default) = fold the loose assets into an on-device pack
-                      // (assets.nxpack/.nxidx, built on first boot) for fast SD I/O.
+  int assetpack;      // 1 (default) = build an on-device pack when data_root is writable.
+                      // Bundled ROMFS assets are read directly because ROMFS is read-only.
                       // 0 = always read the loose files.
   int enable_vulkan;  // 1 (default) = use Godot's Vulkan renderer (NVK) when the driver
                       // comes up; 0 = force GLES3. Falls back to GLES3 if the probe fails.
