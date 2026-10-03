@@ -314,6 +314,30 @@ int truncate_fake(const char *path, int64_t len) {
 // the framerate, so drop that high-frequency noise from the log. Genuine
 // one-off engine messages and our own [wrapper] logs are kept.
 
+// Filter only the known per-frame/per-input Godot script-noise messages. Keep
+// all other Android log output intact so boot failures and real engine errors
+// remain visible in galaxian_debug.log.
+static int godot_log_drop(const char *msg) {
+  if (!msg) return 0;
+
+  // input.gd repeatedly probes a missing/null pause object.
+  if (strstr(msg, "_is_paused") && strstr(msg, "Invalid get"))
+    return 1;
+  if (strstr(msg, "_is_paused") && strstr(msg, "null"))
+    return 1;
+
+  // These two script paths are known to emit the same harmless _process errors
+  // every frame after startup. Do not suppress unrelated errors from them.
+  if (strstr(msg, "lighting") && strstr(msg, "_process") &&
+      (strstr(msg, "Invalid") || strstr(msg, "null")))
+    return 1;
+  if (strstr(msg, "sound") && strstr(msg, "_process") &&
+      (strstr(msg, "Invalid") || strstr(msg, "null")))
+    return 1;
+
+  return 0;
+}
+
 int __android_log_vprint_fake(int prio, const char *tag, const char *fmt, va_list va) {
   (void)prio;
 #if DEBUG_LOG
