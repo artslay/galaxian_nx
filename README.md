@@ -6,59 +6,40 @@ This project is an unofficial fan-made Nintendo Switch port. It loads the origin
 
 ## How to install
 
-Create the following folder on your SD card:
+Copy the built NRO to:
 
 ```text
-/switch/galaxian_nx/
+/switch/galaxian_nx/galaxian_nx.nro
 ```
 
-Place the following files inside:
+The Android game payload is bundled into the NRO during the build. At runtime the
+NRO reads `assets/`, `libgodot_android.so` and `libc++_shared.so` from its ROMFS,
+while configuration, saves, shader caches and runtime overrides remain on the SD card.
+
+## Android APK used for the build
+
+Place the original Galaxy on Fire Android APK in the repository root as:
 
 ```text
-/switch/galaxian_nx/
-├── galaxian_nx.nro
-├── libgodot_android.so
-├── libc++_shared.so
-├── config.txt
-└── assets/
-    ├── project.binary
-    └── ...
+galaxian.apk
 ```
 
-The Android libraries and game data must be obtained from the original Android version of the game.
+or pass another APK explicitly:
 
-The original game libraries and game data are not included in this repository.
+```bash
+make APK=/path/to/your/galaxian.apk
+```
 
-## Obtaining the game files
-
-The original Android APK can be obtained from the [galaxian repository](https://github.com/TheWWWorm/galaxian).
-
-Open the APK with an archive utility such as 7-Zip or WinRAR.
-
-The required native libraries are located in:
+The build imports:
 
 ```text
-lib/arm64-v8a/
+assets/
+lib/arm64-v8a/libgodot_android.so
+lib/arm64-v8a/libc++_shared.so
 ```
 
-Copy:
-
-```text
-libgodot_android.so
-libc++_shared.so
-```
-
-to:
-
-```text
-/switch/galaxian_nx/
-```
-
-Copy the complete `assets/` folder to:
-
-```text
-/switch/galaxian_nx/
-```
+The APK's `assets/dexopt/` subtree is excluded from the NRO. Other files and
+subdirectories under `assets/` are copied unchanged.
 
 ## IPA import
 
@@ -179,11 +160,15 @@ Additional dependencies:
 dkp-pacman -S switch-zlib switch-libexpat
 ```
 
-Then build:
+Then place the original APK in the repository root as `galaxian.apk` and build:
 
 ```bash
 make
 ```
+
+The build extracts `galaxian.apk` into a temporary ROMFS staging directory, removes
+only `assets/dexopt/`, copies the two `arm64-v8a` libraries, and passes the staged
+payload to the libnx ROMFS builder. The APK is not shipped separately.
 
 For a clean build:
 
