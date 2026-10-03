@@ -719,37 +719,6 @@ static int font_aei_cache_store(const char *path, uint8_t *data, size_t len) {
 }
 
 
-#define FONT_AEI_CACHE_MAX 8
-typedef struct {
-  char path[768];
-  uint8_t *data;
-  size_t len;
-} FontAeiCache;
-static FontAeiCache s_font_aei_cache[FONT_AEI_CACHE_MAX];
-static unsigned s_font_aei_cache_count;
-
-static const void *font_aei_cached(const char *path, size_t *len) {
-  for (unsigned i = 0; i < s_font_aei_cache_count; i++) {
-    if (!strcmp(s_font_aei_cache[i].path, path)) {
-      if (len) *len = s_font_aei_cache[i].len;
-      return s_font_aei_cache[i].data;
-    }
-  }
-  return NULL;
-}
-
-static int font_aei_cache_store(const char *path, uint8_t *data, size_t len) {
-  if (s_font_aei_cache_count >= FONT_AEI_CACHE_MAX ||
-      strlen(path) >= sizeof(s_font_aei_cache[0].path))
-    return 0;
-  FontAeiCache *entry = &s_font_aei_cache[s_font_aei_cache_count++];
-  snprintf(entry->path, sizeof(entry->path), "%s", path);
-  entry->data = data;
-  entry->len = len;
-  return 1;
-}
-
-
 // ---------------------------------------------------------------------------
 // Wrapper-provided shader overrides. The game's text_style / text_selected_fx
 // shaders ray-march each glyph through five texture samplers, which Godot's GL
