@@ -1001,8 +1001,7 @@ int prepare_font_aei_override(const char *source_path, char *out, size_t out_siz
   }
 
   if (!write_override_file(base, bytes, len)) {
-    debugPrintf("[font] WARN could not stage patched %s
-", base);
+    debugPrintf("[font] WARN could not stage patched %s\n", base);
     free(bytes);
     return 0;
   }
@@ -1011,8 +1010,7 @@ int prepare_font_aei_override(const char *source_path, char *out, size_t out_siz
   register_font_aei_override(base);
   if (snprintf(out, out_size, "%s", override_path) >= (int)out_size)
     return 0;
-  debugPrintf("[font] FileAccess override %s -> %s
-", source_path, override_path);
+  debugPrintf("[font] FileAccess override %s -> %s\n", source_path, override_path);
   return 1;
 }
 
