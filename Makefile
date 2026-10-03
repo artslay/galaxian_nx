@@ -21,8 +21,11 @@ DATA		:=	data
 # Bundle the original Android APK payload into the NRO ROMFS. The APK itself is
 # never copied to the NRO; only assets/ and the two arm64-v8a shared libraries are kept.
 APK		?= $(CURDIR)/galaxian.apk
+# Stage the payload in the top-level build directory. ROMFS itself is a
+# relative path because the final NRO link runs from the recursive build directory;
+# using an absolute /home/... path breaks the Windows/MSYS path conversion.
 ROMFS_STAGE	:= $(TOPDIR)/$(BUILD)/romfs-stage
-ROMFS		:= $(ROMFS_STAGE)
+ROMFS		:= romfs-stage
 export ROMFS
 
 INCLUDES	:=	source
