@@ -585,7 +585,12 @@ int close_fake(int fd) {
 // executable path so calcBaseDir yields "<data_root>/" as the base dir.
 ssize_t readlink_fake(const char *path, char *buf, size_t bufsz) {
   if (path && strncmp(path, "/proc", 5) == 0) {
-    int n = snprintf(buf, bufsz, "%s/galaxian_nx.nro", config.data_root);
+    // PhysFS expects a real absolute filesystem path here. The payload itself
+    // lives in ROMFS, but reporting a "romfs:" pseudo-path makes calcBaseDir()
+    // fail during PHYSFS_init. Keep the physical NRO location for this query.
+    int n = snprintf(buf, bufsz, "%s/galaxian_nx.nro", DEFAULT_SAVE_ROOT);
+    char *save = strstr(buf, "/save/galaxian_nx.nro");
+    if (save) *save = '\0';
     if (n < 0) return -1;
     if ((size_t)n > bufsz) n = (int)bufsz; // readlink returns the truncated count
     return n;
