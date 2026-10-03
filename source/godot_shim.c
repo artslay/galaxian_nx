@@ -455,6 +455,280 @@ typedef struct {
 
 #define FAKEASSET_MAGIC 0x41534554
 
+/*
+ * The mobile bitmap font is represented by an AEI atlas plus a glyph table.
+ * Some Android exports omit individual ASCII punctuation glyphs (notably '.').
+ * In Original mode the game builds a FontFile from that table, so a missing
+ * codepoint simply has no glyph and the character disappears. Rather than
+ * changing the game's GDScript, repair the imported AEI bytes in memory:
+ * append transparent rows to the image, draw a tiny dot into a fresh tile using
+ * the bottom component of an existing punctuation glyph (prefer ':'), and add
+ * codepoint 46 to every font table that lacks it. Existing atlas pixels and
+ * rectangles are left untouched.
+ */
+typedef struct {
+  uint16_t code;
+  uint16_t x, y, w, h;
+  uint16_t tile_y;
+  int bottom_start;
+  int bottom_end;
+} FontDotPatch;
+
+static uint16_t aei_u16(const uint8_t *p) {
+  return (uint16_t)p[0] | (uint16_t)p[1] << 8;
+}
+
+static void aei_put_u16(uint8_t *p, uint16_t v) {
+  p[0] = (uint8_t)v;
+  p[1] = (uint8_t)(v >> 8);
+}
+
+static int aei_is_font_asset(const char *filename) {
+  const size_t n = strlen(filename);
+  return n >= 4 && !strcmp(filename + n - 4, ".aei");
+}
+
+/* Returns 1 and replaces *data when at least one font table gained '.'. */
+static int patch_aei_dot(uint8_t **data, size_t *len) {
+  if (!data || !*data || !len) return 0;
+  const uint8_t *src = *data;
+  const size_t old_len = *len;
+  if (old_len < 17 || memcmp(src, "AEimage\0", 8) ||
+      src[8] != 1)
+    return 0;
+
+  const uint16_t width = aei_u16(src + 9);
+  const uint16_t height = aei_u16(src + 11);
+  const uint16_t region_count = aei_u16(src + 13);
+  const size_t image_start = 15u + (size_t)region_count * 8u;
+  const size_t image_bytes = (size_t)width * height * 4u;
+  if (!width || !height || width > 4096 || height > 4096 ||
+      image_start > old_len || image_bytes > old_len - image_start)
+    return 0;
+
+  const size_t old_end = image_start + image_bytes;
+  if (old_end + 2 > old_len) return 0;
+  const uint16_t font_count = aei_u16(src + old_end);
+  if (!font_count || font_count > 32) return 0;
+
+  FontDotPatch patches[32];
+  unsigned patch_count = 0;
+  size_t p = old_end + 2;
+
+  for (uint16_t fi = 0; fi < font_count; fi++) {
+    if (p + 2 > old_len) return 0;
+    const uint16_t glyph_count = aei_u16(src + p);
+    const size_t table = p + 2;
+    const size_t codes_bytes = (size_t)glyph_count * 2u;
+    const size_t rects = table + codes_bytes;
+    const size_t table_end = rects + (size_t)glyph_count * 8u;
+    if (!glyph_count || glyph_count > 4096 ||
+        table_end > old_len)
+      return 0;
+
+    int dot_found = 0;
+    FontDotPatch patch = {0};
+    int source_rank = 999;
+
+    for (uint16_t gi = 0; gi < glyph_count; gi++) {
+      const uint16_t code = aei_u16(src + table + (size_t)gi * 2u);
+      const size_t rp = rects + (size_t)gi * 8u;
+      const uint16_t x = aei_u16(src + rp);
+      const uint16_t y = aei_u16(src + rp + 2);
+      const uint16_t w = aei_u16(src + rp + 4);
+      const uint16_t h = aei_u16(src + rp + 6);
+      if ((uint32_t)x + w > width || (uint32_t)y + h > height ||
+          !w || !h)
+        return 0;
+      if (code == 46) {
+        dot_found = 1;
+        break;
+      }
+
+      /*
+       * Prefer ':' because its lower connected component is naturally a
+       * period-sized dot. Fall back to ',', '!', apostrophe, then ';'.
+       */
+      int rank = (code == 58) ? 0 :
+                 (code == 44) ? 1 :
+                 (code == 33) ? 2 :
+                 (code == 39) ? 3 :
+                 (code == 59) ? 4 : 999;
+      if (rank < source_rank) {
+        patch.code = code;
+        patch.x = x; patch.y = y; patch.w = w; patch.h = h;
+        source_rank = rank;
+      }
+    }
+
+    if (!dot_found && source_rank != 999 && patch_count < 32) {
+      /* Find the bottom-most non-empty row component to keep as the dot. */
+      int last = -1;
+      int first = -1;
+      for (int row = (int)patch.h - 1; row >= 0; row--) {
+        int nonempty = 0;
+        for (unsigned col = 0; col < patch.w; col++) {
+          const size_t off =
+            image_start +
+            ((size_t)patch.y + (size_t)row) * width * 4u +
+            ((size_t)patch.x + col) * 4u;
+          if (src[off + 3] != 0) {
+            nonempty = 1;
+            break;
+          }
+        }
+        if (nonempty) {
+          if (last < 0) last = row;
+        } else if (last >= 0) {
+          first = row + 1;
+          break;
+        }
+      }
+      if (last < 0) return 0;
+      if (first < 0) first = 0;
+      patch.bottom_start = first;
+      patch.bottom_end = last;
+      patches[patch_count++] = patch;
+    }
+    p = table_end;
+  }
+
+  if (!patch_count) return 0;
+
+  size_t added_rows = 0;
+  for (unsigned i = 0; i < patch_count; i++)
+    added_rows += patches[i].h;
+  if ((size_t)height + added_rows > 4096)
+    return 0;
+
+  const size_t added_image = added_rows * width * 4u;
+  const size_t added_tables = (size_t)patch_count * 10u;
+  if (added_image > SIZE_MAX - old_len ||
+      added_tables > SIZE_MAX - old_len - added_image)
+    return 0;
+
+  const size_t new_len = old_len + added_image + added_tables;
+  uint8_t *out = calloc(1, new_len);
+  if (!out) return 0;
+
+  memcpy(out, src, image_start);
+  aei_put_u16(out + 11, (uint16_t)((size_t)height + added_rows));
+  memcpy(out + image_start, src + image_start, image_bytes);
+
+  size_t tile_offset = image_bytes;
+  for (unsigned i = 0; i < patch_count; i++) {
+    FontDotPatch *patch = &patches[i];
+    patch->tile_y = (uint16_t)((size_t)height + (tile_offset - image_bytes) / width / 4u);
+
+    for (uint16_t row = 0; row < patch->h; row++) {
+      for (uint16_t col = 0; col < patch->w; col++) {
+        if ((int)row < patch->bottom_start || (int)row > patch->bottom_end)
+          continue;
+        const size_t so =
+          image_start +
+          ((size_t)patch->y + row) * width * 4u +
+          ((size_t)patch->x + col) * 4u;
+        const size_t doff =
+          image_start + tile_offset +
+          (size_t)row * width * 4u +
+          (size_t)col * 4u;
+        memcpy(out + doff, src + so, 4);
+      }
+    }
+    tile_offset += (size_t)patch->h * width * 4u;
+  }
+
+  const size_t new_end = image_start +
+    (size_t)width * ((size_t)height + added_rows) * 4u;
+  aei_put_u16(out + new_end, font_count);
+
+  size_t oldp = old_end + 2;
+  size_t newp = new_end + 2;
+  unsigned patch_index = 0;
+  for (uint16_t fi = 0; fi < font_count; fi++) {
+    const uint16_t glyph_count = aei_u16(src + oldp);
+    const size_t old_table = oldp + 2;
+    const size_t old_rects = old_table + (size_t)glyph_count * 2u;
+    const size_t old_table_end = old_rects + (size_t)glyph_count * 8u;
+    const int target =
+      patch_index < patch_count &&
+      patches[patch_index].code != 0 &&
+      !aei_u16(src + old_table) /* replaced below */;
+    (void)target;
+
+    int has_dot = 0;
+    for (uint16_t gi = 0; gi < glyph_count; gi++)
+      if (aei_u16(src + old_table + (size_t)gi * 2u) == 46) {
+        has_dot = 1;
+        break;
+      }
+
+    const int should_add = !has_dot &&
+      patch_index < patch_count;
+    const uint16_t new_count = (uint16_t)(glyph_count + (should_add ? 1 : 0));
+    aei_put_u16(out + newp, new_count);
+    newp += 2;
+    memcpy(out + newp, src + old_table, (size_t)glyph_count * 2u);
+    newp += (size_t)glyph_count * 2u;
+    if (should_add) {
+      aei_put_u16(out + newp, 46);
+      newp += 2;
+    }
+    memcpy(out + newp, src + old_rects, (size_t)glyph_count * 8u);
+    newp += (size_t)glyph_count * 8u;
+    if (should_add) {
+      FontDotPatch *patch = &patches[patch_index++];
+      aei_put_u16(out + newp, 0);
+      aei_put_u16(out + newp + 2, patch->tile_y);
+      aei_put_u16(out + newp + 4, patch->w);
+      aei_put_u16(out + newp + 6, patch->h);
+      newp += 8;
+    }
+    oldp = old_table_end;
+  }
+
+  if (newp != new_len) {
+    free(out);
+    return 0;
+  }
+  free(*data);
+  *data = out;
+  *len = new_len;
+  debugPrintf("[font] injected '.' glyph into %u AEI font table(s)\n", patch_count);
+  return 1;
+}
+
+#define FONT_AEI_CACHE_MAX 8
+typedef struct {
+  char path[768];
+  uint8_t *data;
+  size_t len;
+} FontAeiCache;
+static FontAeiCache s_font_aei_cache[FONT_AEI_CACHE_MAX];
+static unsigned s_font_aei_cache_count;
+
+static const void *font_aei_cached(const char *path, size_t *len) {
+  for (unsigned i = 0; i < s_font_aei_cache_count; i++) {
+    if (!strcmp(s_font_aei_cache[i].path, path)) {
+      if (len) *len = s_font_aei_cache[i].len;
+      return s_font_aei_cache[i].data;
+    }
+  }
+  return NULL;
+}
+
+static int font_aei_cache_store(const char *path, uint8_t *data, size_t len) {
+  if (s_font_aei_cache_count >= FONT_AEI_CACHE_MAX ||
+      strlen(path) >= sizeof(s_font_aei_cache[0].path))
+    return 0;
+  FontAeiCache *entry = &s_font_aei_cache[s_font_aei_cache_count++];
+  snprintf(entry->path, sizeof(entry->path), "%s", path);
+  entry->data = data;
+  entry->len = len;
+  return 1;
+}
+
+
 // ---------------------------------------------------------------------------
 // Wrapper-provided shader overrides. The game's text_style / text_selected_fx
 // shaders ray-march each glyph through five texture samplers, which Godot's GL
@@ -712,6 +986,78 @@ void *AAssetManager_open_fake(void *mgr, const char *filename, int mode) {
     debugPrintf("[ovr] serving override for %s\n", filename);
   } else {
     snprintf(path, sizeof(path), "%s/assets/%s", config.data_root, filename);
+
+    /*
+     * Repair missing bitmap punctuation without touching the game's scripts.
+     * This path is only taken for AEI texture files and is cached after the
+     * first successful repair, so normal asset opens remain unchanged.
+     */
+    if (aei_is_font_asset(filename)) {
+      size_t cached_len = 0;
+      const void *cached = font_aei_cached(path, &cached_len);
+      if (cached) {
+        FakeAsset *a = calloc(1, sizeof(*a));
+        if (!a) return NULL;
+        a->magic = FAKEASSET_MAGIC;
+        a->mem = cached;
+        a->len = (int64_t)cached_len;
+        g_asset_open_count++;
+        return a;
+      }
+
+      void *raw = NULL;
+      size_t raw_len = 0;
+      int loaded = 0;
+
+      if (asset_pack_active())
+        loaded = asset_pack_read_all_path(path, &raw, &raw_len);
+
+      if (!loaded) {
+        FILE *rf = fopen(path, "rb");
+        if (rf) {
+          if (fseek(rf, 0, SEEK_END) == 0) {
+            long sz = ftell(rf);
+            if (sz > 0 && fseek(rf, 0, SEEK_SET) == 0) {
+              raw_len = (size_t)sz;
+              raw = malloc(raw_len);
+              if (raw && fread(raw, 1, raw_len, rf) == raw_len)
+                loaded = 1;
+            }
+          }
+          fclose(rf);
+          if (!loaded) {
+            free(raw);
+            raw = NULL;
+            raw_len = 0;
+          }
+        }
+      }
+
+      if (loaded && patch_aei_dot((uint8_t **)&raw, &raw_len)) {
+        if (!font_aei_cache_store(path, raw, raw_len)) {
+          /* Cache full: this asset still works for this open. */
+          FakeAsset *a = calloc(1, sizeof(*a));
+          if (!a) { free(raw); return NULL; }
+          a->magic = FAKEASSET_MAGIC;
+          a->mem = raw;
+          a->len = (int64_t)raw_len;
+          g_asset_open_count++;
+          return a;
+        }
+        cached = raw;
+        cached_len = raw_len;
+
+        FakeAsset *a = calloc(1, sizeof(*a));
+        if (!a) return NULL;
+        a->magic = FAKEASSET_MAGIC;
+        a->mem = cached;
+        a->len = (int64_t)cached_len;
+        g_asset_open_count++;
+        return a;
+      }
+      free(raw);
+    }
+
     // Fast path: serve the game's own assets from the on-device asset pack (one
     // indexed file) instead of opening a loose file on the SD card each time.
     // Overrides (_ovr) are NEVER packed, so this only covers real game assets.
@@ -731,6 +1077,7 @@ void *AAssetManager_open_fake(void *mgr, const char *filename, int mode) {
       }
     }
   }
+
   FILE *f = fopen(path, "rb");
 #if VERBOSE_IO
   debugPrintf("AAssetManager_open(\"%s\") -> %p\n", filename, (void *)f);
