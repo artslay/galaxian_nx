@@ -659,10 +659,27 @@ void *AAssetManager_fromJava_fake(void *env, void *assetManager) {
   return g_fake_assetmgr;
 }
 
+static const char *normalize_asset_filename(const char *filename) {
+  if (!filename) return NULL;
+  while (*filename == '/') filename++;
+
+  // Android normally passes an assets-relative name. Also accept paths leaked
+  // from the physical NRO directory and normalize them to the assets root.
+  static const char app_prefix[] = "switch/galaxian_nx/";
+  if (!strncmp(filename, app_prefix, sizeof(app_prefix) - 1))
+    filename += sizeof(app_prefix) - 1;
+  if (!strncmp(filename, "assets/", 7))
+    filename += 7;
+  else if (!strcmp(filename, "assets"))
+    filename += 6;
+
+  return filename;
+}
+
 void *AAssetManager_open_fake(void *mgr, const char *filename, int mode) {
   (void)mgr; (void)mode;
   if (!filename) return NULL;
-  while (*filename == '/') filename++;
+  filename = normalize_asset_filename(filename);
 
   // transparent substitution: open OUR copy (written to <save_root>/_ovr at startup)
   // instead of the game's file -- the compatibility text shaders and patched scripts.
