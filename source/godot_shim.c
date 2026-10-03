@@ -467,6 +467,7 @@ typedef struct {
  * rectangles are left untouched.
  */
 typedef struct {
+  uint16_t font_index;
   uint16_t code;
   uint16_t x, y, w, h;
   uint16_t tile_y;
@@ -588,6 +589,7 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
       if (first < 0) first = 0;
       patch.bottom_start = first;
       patch.bottom_end = last;
+      patch.font_index = fi;
       patches[patch_count++] = patch;
     }
     p = table_end;
@@ -650,12 +652,6 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
     const size_t old_table = oldp + 2;
     const size_t old_rects = old_table + (size_t)glyph_count * 2u;
     const size_t old_table_end = old_rects + (size_t)glyph_count * 8u;
-    const int target =
-      patch_index < patch_count &&
-      patches[patch_index].code != 0 &&
-      !aei_u16(src + old_table) /* replaced below */;
-    (void)target;
-
     int has_dot = 0;
     for (uint16_t gi = 0; gi < glyph_count; gi++)
       if (aei_u16(src + old_table + (size_t)gi * 2u) == 46) {
@@ -663,8 +659,14 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
         break;
       }
 
-    const int should_add = !has_dot &&
-      patch_index < patch_count;
+    int patch_for_font = -1;
+    for (unsigned pi = 0; pi < patch_count; pi++) {
+      if (patches[pi].font_index == fi) {
+        patch_for_font = (int)pi;
+        break;
+      }
+    }
+    const int should_add = !has_dot && patch_for_font >= 0;
     const uint16_t new_count = (uint16_t)(glyph_count + (should_add ? 1 : 0));
     aei_put_u16(out + newp, new_count);
     newp += 2;
@@ -677,7 +679,7 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
     memcpy(out + newp, src + old_rects, (size_t)glyph_count * 8u);
     newp += (size_t)glyph_count * 8u;
     if (should_add) {
-      FontDotPatch *patch = &patches[patch_index++];
+      FontDotPatch *patch = &patches[patch_for_font];
       aei_put_u16(out + newp, 0);
       aei_put_u16(out + newp + 2, patch->tile_y);
       aei_put_u16(out + newp + 4, patch->w);
