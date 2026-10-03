@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "util.h"
 #include "config.h"
@@ -60,6 +61,16 @@ void userAppExit(void) {
 
 // Shared TLS block for the engine stack-protector guard at tpidr_el0 + 0x28.
 static uint8_t s_tls_block[0x1000] __attribute__((aligned(16)));
+
+// Point tpidr_el0 straight at the guard block with msr, WITHOUT armSetTlsRw's
+// getThreadVars path, so it works even on a thread that has no libnx TLS at all
+// (tpidr_el0 == 0 -- the engine's Vulkan render/worker threads). no_stack_protector
+// so this function never reads the canary it is about to install.
+__attribute__((no_stack_protector))
+static void heal_stack_guard(void) {
+  *(uint64_t *)(s_tls_block + 0x28) = 0x0123456789ABCDEFull;
+  armSetTlsRw(s_tls_block);
+}
 
 // Point tpidr_el0 straight at the guard block with msr, WITHOUT armSetTlsRw's
 // getThreadVars path, so it works even on a thread that has no libnx TLS at all
