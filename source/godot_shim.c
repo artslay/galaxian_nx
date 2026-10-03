@@ -646,7 +646,6 @@ static int patch_aei_dot(uint8_t **data, size_t *len) {
 
   size_t oldp = old_end + 2;
   size_t newp = new_end + 2;
-  unsigned patch_index = 0;
   for (uint16_t fi = 0; fi < font_count; fi++) {
     const uint16_t glyph_count = aei_u16(src + oldp);
     const size_t old_table = oldp + 2;
