@@ -588,9 +588,12 @@ ssize_t readlink_fake(const char *path, char *buf, size_t bufsz) {
     // PhysFS expects a real absolute filesystem path here. The payload itself
     // lives in ROMFS, but reporting a "romfs:" pseudo-path makes calcBaseDir()
     // fail during PHYSFS_init. Keep the physical NRO location for this query.
-    int n = snprintf(buf, bufsz, "%s/galaxian_nx.nro", DEFAULT_SAVE_ROOT);
-    char *save = strstr(buf, "/save/galaxian_nx.nro");
-    if (save) *save = '\0';
+    char root[256];
+    strlcpy(root, DEFAULT_SAVE_ROOT, sizeof(root));
+    char *slash = strrchr(root, '/');
+    if (slash && slash != root)
+      *slash = '\0';
+    int n = snprintf(buf, bufsz, "%s/galaxian_nx.nro", root);
     if (n < 0) return -1;
     if ((size_t)n > bufsz) n = (int)bufsz; // readlink returns the truncated count
     return n;
