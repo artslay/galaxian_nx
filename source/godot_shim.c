@@ -835,11 +835,28 @@ static const char *override_src_for(const char *base) {
 static char s_script_overrides[MAX_SCRIPT_OVERRIDES][64];
 static int s_script_override_count;
 
+#define MAX_FONT_AEI_OVERRIDES 8
+static char s_font_aei_overrides[MAX_FONT_AEI_OVERRIDES][64];
+static unsigned s_font_aei_override_count;
+
+static void register_font_aei_override(const char *base) {
+  if (!base || !*base || strlen(base) >= sizeof(s_font_aei_overrides[0]))
+    return;
+  for (unsigned i = 0; i < s_font_aei_override_count; i++)
+    if (!strcmp(base, s_font_aei_overrides[i]))
+      return;
+  if (s_font_aei_override_count < MAX_FONT_AEI_OVERRIDES)
+    snprintf(s_font_aei_overrides[s_font_aei_override_count++],
+             sizeof(s_font_aei_overrides[0]), "%s", base);
+}
+
 static int is_override_file(const char *base) {
   if (!strcmp(base, "override.cfg")) return 1;
   if (is_override_shader(base)) return 1;
   for (int i = 0; i < s_script_override_count; i++)
     if (!strcmp(base, s_script_overrides[i])) return 1;
+  for (unsigned i = 0; i < s_font_aei_override_count; i++)
+    if (!strcmp(base, s_font_aei_overrides[i])) return 1;
   return 0;
 }
 
@@ -912,6 +929,93 @@ static int write_override_file(const char *base, const void *data, size_t n) {
 // failed with "Cannot parse shader" (text_selected_fx.gdshader on 1.00.91, taking
 // input_menu.scn and pause_menu.gd down with it). The spaces stay inside that
 // trailing comment. With no original to measure, the copy is written unpadded.
+/*
+ * Prepare a writable _ovr copy of a real AEI font atlas for the FileAccessHandler.
+ * The Android game loads library textures through FileAccess, not AAssetManager.
+ * This lets us repair the missing/blank '.' glyph without touching game scripts.
+ */
+int prepare_font_aei_override(const char *source_path, char *out, size_t out_size) {
+  if (!source_path || !out || out_size == 0)
+    return 0;
+
+  const char *slash = strrchr(source_path, '/');
+  const char *base = slash ? slash + 1 : source_path;
+  const size_t base_len = strlen(base);
+  if (base_len < 4 || strcmp(base + base_len - 4, ".aei") != 0)
+    return 0;
+  if (strstr(source_path, "/_ovr/"))
+    return 0;
+
+  char override_path[768];
+  snprintf(override_path, sizeof(override_path), "%s/_ovr/%s", config.save_root, base);
+
+  /*
+   * If this atlas was already prepared this boot, just reuse it. The override
+   * is only registered after a successful write, so resolve_gd_path can redirect
+   * subsequent opens before they reach this function.
+   */
+  struct stat ost;
+  if (stat(override_path, &ost) == 0 && ost.st_size > 0) {
+    register_font_aei_override(base);
+    if (snprintf(out, out_size, "%s", override_path) >= (int)out_size)
+      return 0;
+    return 1;
+  }
+
+  void *raw = NULL;
+  size_t raw_len = 0;
+  int loaded = 0;
+  if (asset_pack_active())
+    loaded = asset_pack_read_all_path(source_path, &raw, &raw_len);
+
+  if (!loaded) {
+    FILE *f = fopen(source_path, "rb");
+    if (f) {
+      if (fseek(f, 0, SEEK_END) == 0) {
+        long sz = ftell(f);
+        if (sz > 0 && fseek(f, 0, SEEK_SET) == 0) {
+          raw_len = (size_t)sz;
+          raw = malloc(raw_len);
+          if (raw && fread(raw, 1, raw_len, f) == raw_len)
+            loaded = 1;
+        }
+      }
+      fclose(f);
+    }
+  }
+
+  if (!loaded) {
+    free(raw);
+    return 0;
+  }
+
+  uint8_t *bytes = raw;
+  size_t len = raw_len;
+  if (!patch_aei_dot(&bytes, &len)) {
+    /*
+     * No repair was needed (or this is not a font atlas). Do not register an
+     * override; the original asset remains the source of truth.
+     */
+    free(bytes);
+    return 0;
+  }
+
+  if (!write_override_file(base, bytes, len)) {
+    debugPrintf("[font] WARN could not stage patched %s
+", base);
+    free(bytes);
+    return 0;
+  }
+  free(bytes);
+
+  register_font_aei_override(base);
+  if (snprintf(out, out_size, "%s", override_path) >= (int)out_size)
+    return 0;
+  debugPrintf("[font] FileAccess override %s -> %s
+", source_path, override_path);
+  return 1;
+}
+
 void write_frame_pacing_override(void) {
   static const char body[] =
     "; Written by the Switch wrapper: disable Android Swappy frame pacing.\n"
