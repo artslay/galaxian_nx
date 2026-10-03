@@ -187,7 +187,7 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 all	:	$(OUTPUT).nro
 
-$(OUTPUT).nro	:	$(OUTPUT).elf $(OUTPUT).nacp
+$(OUTPUT).nro	:	$(OUTPUT).elf $(OUTPUT).nacp $(ROMFS_STAGE)/.stamp
 $(OUTPUT).elf	:	$(OFILES)
 
 $(OFILES_SRC)	: $(HFILES_BIN)
