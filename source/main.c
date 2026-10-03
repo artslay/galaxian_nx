@@ -88,13 +88,13 @@ static void check_syscalls(void) {
 static void check_data(void) {
   struct stat st;
   if (stat(SO_NAME, &st) < 0)
-    fatal_error("Could not find\n%s.\nPlace it next to the NRO.", SO_NAME);
+    fatal_error("Could not find bundled\n%s.", path);
   if (stat(CXX_SO_NAME, &st) < 0)
-    fatal_error("Could not find\n%s.\nPlace it next to the NRO.", CXX_SO_NAME);
+    fatal_error("Could not find bundled\n%s.", path);
   char assets[300];
   snprintf(assets, sizeof(assets), "%s/assets/project.binary", config.data_root);
   if (stat(assets, &st) < 0)
-    fatal_error("Could not find\nassets/project.binary.\nCopy the APK's assets/ folder next to the NRO.");
+    fatal_error("Could not find bundled\nassets/project.binary.");
 }
 
 // Resolve the app data directory. Prefer the payload bundled in the NRO ROMFS;
@@ -752,7 +752,7 @@ static FILE *s_stats;
 static void stats_open(void) {
 #if DEBUG_LOG
   char p[300];
-  snprintf(p, sizeof(p), "%s/boot_stats.txt", config.data_root);
+  snprintf(p, sizeof(p), "%s/boot_stats.txt", config.save_root);
   s_stats = fopen(p, "w");
   s_t_boot = armGetSystemTick();
   if (s_stats) {
