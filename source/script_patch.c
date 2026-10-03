@@ -100,20 +100,10 @@ static const ConstPatch k_main[] = {
   { "android", "nxfalse", 0.0, 0.0, 2 },
 };
 
-static const ConstPatch k_bitmap_font[] = {
-  { "mobile", "nxfalse", 0.0, 0.0, 1 },
-  { NULL, NULL, 0.5, 1.0, 1 },
-};
-
-/* Both UI modes use Godot's complete fallback font on Switch because the
- * Android/mobile bitmap atlas does not contain every punctuation glyph (notably
- * ASCII '-'). The second patch keeps the mobile composition scale at 1.0 even
- * though the font path is the fallback path. */
 static const ScriptPatch k_scripts[] = {
   { "scripts/touch_controls.gdc", "touch_controls.gdc", k_touch_controls, 2, 1 },
   { "scripts/Functions/save_load.gdc", "save_load.gdc", k_save_load, 1, 1 },
   { "src/main.gdc", "main.gdc", k_main, 1, 0 },
-  { "src/presentation/bitmap_font.gdc", "bitmap_font.gdc", k_bitmap_font, 2, 0 },
 };
 
 static uint32_t read_u32(const uint8_t *p) {
