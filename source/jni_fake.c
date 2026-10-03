@@ -435,7 +435,7 @@ static int gd_file_open(const char *path, int mode) {
     default: return -1;
   }
 
-  char buf[512];
+  char buf[768];
   resolve_gd_path(ACCESS_FILESYSTEM, path, buf, sizeof(buf));
 
   /*
