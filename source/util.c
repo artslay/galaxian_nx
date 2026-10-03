@@ -42,6 +42,7 @@ static void deinitNxLink(void) {
 // instead of reopening it per line (the engine logs thousands of lines).
 void userAppInit(void) {
   initNxLink();
+  mkdir(DEFAULT_SAVE_ROOT, 0777);
   s_log = fopen(LOG_PATH, "w");
   if (!s_log) s_log = fopen(LOG_NAME, "w"); // fall back to the launch CWD
   if (s_log) {
