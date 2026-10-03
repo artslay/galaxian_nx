@@ -1088,10 +1088,18 @@ static void watchdog_dump(void) {
   }
 }
 
-static void load_module(so_module *mod, const char *name, void *base, size_t limit) {
-  int res = so_load(mod, name, base, limit);
+static void load_module(so_module *mod, const char *path, void *base, size_t limit) {
+  int res = so_load(mod, path, base, limit);
   if (res < 0)
-    fatal_error("Could not load\n%s (%d).", name, res);
+    fatal_error("Could not load\n%s (%d).", path, res);
+
+  // Keep the module identity Android-compatible even when the backing file is
+  // addressed through the NRO ROMFS device prefix. dlpi_name is exposed to the
+  // engine by dl_iterate_phdr and must remain a bare soname, not "romfs:/...".
+  const char *slash = strrchr(path, '/');
+  const char *name = slash ? slash + 1 : path;
+  strlcpy(mod->name, name, sizeof(mod->name));
+
   debugPrintf("== so_load %s ok (load_size=%u KB) ==\n", name, (unsigned)(mod->load_size >> 10));
 }
 
